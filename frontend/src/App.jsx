@@ -4,10 +4,10 @@ const BACKEND_URL = "http://localhost:5000";
 
 const App = () => {
   const [logs, setLogs] = useState([]);
-  const [isPushing, setIsPushing] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const triggerAttack = async () => {
-    // Randomizing values to occasionally trigger different AI statuses
+    // Randomized data to test different AI confidence levels
     const attackData = {
       V1: (Math.random() * 20 - 10).toFixed(2), 
       V2: (Math.random() * 20 - 10).toFixed(2),
@@ -24,22 +24,25 @@ const App = () => {
       const result = await res.json();
       setLogs(prev => [result, ...prev]);
     } catch (err) {
-      alert("Backend error! Ensure 'python app.py' is running.");
+      alert("Backend error! Run 'python app.py' in the other terminal.");
     }
   };
 
   const handleMLOps = async () => {
-    setIsPushing(true);
+    setIsSyncing(true);
     try {
-      await fetch(`${BACKEND_URL}/trigger-mlops`, { method: 'POST' });
-      alert("SUCCESS: MLOps Cycle Started. Watch the terminal for Git logs!");
-    } finally { setIsPushing(false); }
+      const res = await fetch(`${BACKEND_URL}/trigger-mlops`, { method: 'POST' });
+      const data = await res.json();
+      alert(`SUCCESS: ${data.message}`);
+    } catch (err) {
+      alert("MLOps Sync failed. Check terminal for Git conflicts.");
+    } finally { setIsSyncing(false); }
   };
 
   return (
     <div style={styles.body}>
-      <h1 style={{color: '#00ff88'}}>🛡️ FRAUD WATCHDOG: LIVE MLOPS TERMINAL</h1>
-      <p style={{color: '#888'}}>B.Tech CSE Project | Local-to-Cloud Adaptation Loop</p>
+      <h1 style={{color: '#00ff88'}}>🛡️ FRAUD WATCHDOG: MLOPS TERMINAL</h1>
+      <p style={{color: '#888'}}>B.Tech CSE Project | Adaptive AI Monitoring</p>
       
       <button onClick={triggerAttack} style={styles.btn}>🚨 LAUNCH NEW ATTACK</button>
 
@@ -52,8 +55,8 @@ const App = () => {
             <p><strong>{log.status}</strong> | {log.id} | Amount: ${log.amount}</p>
             <p>AI Confidence: {log.probability}</p>
             {log.status === 'REQUIRES_HUMAN_REVIEW' && (
-              <button onClick={handleMLOps} disabled={isPushing} style={styles.adaptBtn}>
-                {isPushing ? "SYNCING TO CLOUD..." : "✅ APPROVE & TRIGGER ADAPTATION"}
+              <button onClick={handleMLOps} disabled={isSyncing} style={styles.adaptBtn}>
+                {isSyncing ? "SYNCING TO GITHUB..." : "✅ APPROVE & TRIGGER ADAPTATION"}
               </button>
             )}
           </div>
