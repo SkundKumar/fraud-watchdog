@@ -1,0 +1,23 @@
+name: Cloud Lab MLOps Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: # This adds a manual "Run" button as a backup
+
+jobs:
+  deploy-model:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_ID }}
+          aws-region: us-east-1
+
+      - name: Sync Models to S3
+        run: |
+          aws s3 sync backend/model/ s3://fraud-watchdog-models-skund/models/ --delete
