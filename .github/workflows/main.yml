@@ -3,7 +3,7 @@ name: Cloud Lab MLOps Pipeline
 on:
   push:
     branches: [ main ]
-  workflow_dispatch: # This adds a manual "Run" button as a backup
+  workflow_dispatch: # This adds the "Run workflow" button for manual testing
 
 jobs:
   deploy-model:
@@ -15,7 +15,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
       - name: Sync Models to S3
