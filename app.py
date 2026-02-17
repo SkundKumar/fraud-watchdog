@@ -14,7 +14,7 @@ CORS(app)
 MODEL_PATH = 'backend/model/fraud_v2.pkl'
 mlops_stats = {"version": 1.0, "maturity": 45, "threats_caught": 0}
 
-# Temporary storage for the last "Approved" threat to use for training
+# Global buffer to store patterns for retraining
 last_threat_pattern = None
 
 @app.route('/predict', methods=['POST'])
@@ -24,26 +24,30 @@ def predict():
         data = request.json
         model = joblib.load(MODEL_PATH)
         
-        # Prepare 30 features
+        # 1. Feature Names setup to match the model
         col_names = ['Time'] + [f'V{i}' for i in range(1, 29)] + ['Amount']
         features = [0.0] * 30 
         features[0], features[1], features[2], features[29] = float(data['Time'])/1000, float(data['V1']), float(data['V2']), float(data['Amount'])
-        for i in range(3, 29): features[i] = np.random.normal(0, 1.5)
-            
-        df = pd.DataFrame([features], columns=col_names)
         
-        # Save this pattern in case the user approves it as fraud
+        # Use Gaussian Noise for V3-V28
+        for i in range(3, 29): features[i] = np.random.normal(0, 1.2)
+            
+        # Convert to DataFrame with names to STOP THE PINK WARNINGS
+        df = pd.DataFrame([features], columns=col_names)
         last_threat_pattern = features 
         
+        # 2. AI Inference
         proba = model.predict_proba(df)[0][1]
         
+        # Decision Logic
         status = "Safe"
-        if proba > 0.45: 
+        if proba > 0.55: # Slightly raised threshold for less "paranoia"
             status = "FRAUD"
             mlops_stats["threats_caught"] += 1
-        elif 0.15 <= proba <= 0.45: 
+        elif 0.20 <= proba <= 0.55: 
             status = "REQUIRES_HUMAN_REVIEW"
         
+        print(f"📊 INFERENCE: {status} | Prob: {proba}")
         return jsonify({
             'id': f"TXN-{int(datetime.now().timestamp())}",
             'status': status,
@@ -61,40 +65,42 @@ def trigger_mlops():
         if last_threat_pattern is None:
             return jsonify({"error": "No pattern to learn"}), 400
 
-        print("🧠 [AI] Starting Real-Time Model Retraining...")
+        print("🧠 [AI] Stabilizing Brain with Baseline Retraining...")
         
-        # 1. ACTUAL MACHINE LEARNING: Micro-Retraining
-        # We create a small training set: some 'Safe' noise and the 'New Fraud'
-        X_new = []
-        y_new = []
+        # 3. BALANCED RETRAINING
+        # To prevent the 'flag everything' bug, we need a large 'Safe' baseline
+        X_train = []
+        y_train = []
+        col_names = ['Time'] + [f'V{i}' for i in range(1, 29)] + ['Amount']
         
-        # Add 20 examples of the NEW Fraud pattern (Velocity Attack)
-        for _ in range(20):
-            # Add slight jitter so the AI learns the *area*, not just one number
-            jittered = [f + np.random.normal(0, 0.05) for f in last_threat_pattern]
-            X_new.append(jittered)
-            y_new.append(1) # Label as FRAUD
+        # Add 30 examples of the Fraudulent Pattern
+        for _ in range(30):
+            X_train.append([f + np.random.normal(0, 0.02) for f in last_threat_pattern])
+            y_train.append(1) 
             
-        # Add 20 examples of 'Safe' noise so the model stays balanced
-        for _ in range(20):
-            X_new.append([np.random.normal(0, 1) for _ in range(30)])
-            y_new.append(0) # Label as SAFE
+        # Add 200 examples of 'Safe' data to maintain balance
+        for _ in range(200):
+            safe_sample = [np.random.normal(0, 1.5) for _ in range(30)]
+            X_train.append(safe_sample)
+            y_train.append(0)
 
-        # Load, Retrain, and Save the .pkl file
-        model = joblib.load(MODEL_PATH)
-        model.fit(X_new, y_new) 
+        # Convert to DataFrame BEFORE fitting to bake feature names into the model
+        df_train = pd.DataFrame(X_train, columns=col_names)
+        
+        # Create a fresh model and fit (prevents additive weight corruption)
+        model = RandomForestClassifier(n_estimators=100, max_depth=10)
+        model.fit(df_train, y_train) 
         joblib.dump(model, MODEL_PATH)
         
-        # Update MLOps Stats
-        mlops_stats["maturity"] = min(99, mlops_stats["maturity"] + 12)
+        mlops_stats["maturity"] = min(99, mlops_stats["maturity"] + 10)
         mlops_stats["version"] = round(mlops_stats["version"] + 0.1, 1)
         
-        # 2. GIT SYNC (Pushes the actual updated .pkl file!)
+        # 4. Atomic Git Sync
         subprocess.run(['git', 'add', '.'], check=True)
-        subprocess.run(['git', 'commit', '-m', f"MLOps: Model Retrained on New Threat v{mlops_stats['version']}"], check=True)
+        subprocess.run(['git', 'commit', '-m', f"MLOps: Model Balanced & Retrained v{mlops_stats['version']}"], check=True)
         subprocess.run(['git', 'push', 'origin', 'main'], check=True)
         
-        return jsonify({"status": "success", "message": "AI Brain Updated!", "stats": mlops_stats})
+        return jsonify({"status": "success", "message": "AI Brain Stabilized!", "stats": mlops_stats})
     except Exception as e:
         print(f"❌ Retraining Error: {e}")
         return jsonify({"status": "error", "message": str(e)})
