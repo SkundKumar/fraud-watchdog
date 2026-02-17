@@ -21,4 +21,3 @@ jobs:
       run: |
         # Correct path for root-level backend folder
         aws s3 sync backend/model/ s3://fraud-watchdog-models-skund/models/ --delete
-        
