@@ -1,0 +1,25 @@
+name: Cloud Lab MLOps Pipeline
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/model/**' # Triggers only when the model changes
+
+jobs:
+  deploy-model:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1 # Updated to match your bucket in image_14ab62.png
+
+    - name: Sync Models to S3
+      run: |
+        # Synchronizes your local model folder to your S3 bucket
+        aws s3 sync backend/model/ s3://fraud-watchdog-models-skund/models/ --delete
