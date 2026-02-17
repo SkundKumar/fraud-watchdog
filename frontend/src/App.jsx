@@ -5,9 +5,9 @@ const BACKEND_URL = "http://localhost:5000";
 const App = () => {
   const [logs, setLogs] = useState([]);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [stats, setStats] = useState({ version: 1.0, maturity: 45, threats_caught: 0 });
 
   const triggerAttack = async () => {
-    // Randomized data to test different AI confidence levels
     const attackData = {
       V1: (Math.random() * 20 - 10).toFixed(2), 
       V2: (Math.random() * 20 - 10).toFixed(2),
@@ -23,8 +23,9 @@ const App = () => {
       });
       const result = await res.json();
       setLogs(prev => [result, ...prev]);
+      if (result.stats) setStats(result.stats);
     } catch (err) {
-      alert("Backend error! Run 'python app.py' in the other terminal.");
+      alert("Backend error! Run 'python app.py'.");
     }
   };
 
@@ -33,30 +34,37 @@ const App = () => {
     try {
       const res = await fetch(`${BACKEND_URL}/trigger-mlops`, { method: 'POST' });
       const data = await res.json();
-      alert(`SUCCESS: ${data.message}`);
+      if (data.stats) setStats(data.stats);
     } catch (err) {
-      alert("MLOps Sync failed. Check terminal for Git conflicts.");
+      console.error(err);
     } finally { setIsSyncing(false); }
   };
 
   return (
     <div style={styles.body}>
-      <h1 style={{color: '#00ff88'}}>🛡️ FRAUD WATCHDOG: MLOPS TERMINAL</h1>
-      <p style={{color: '#888'}}>B.Tech CSE Project | Adaptive AI Monitoring</p>
-      
-      <button onClick={triggerAttack} style={styles.btn}>🚨 LAUNCH NEW ATTACK</button>
+      {/* --- VISUAL EFFECTIVENESS HEADER --- */}
+      <div style={styles.statsBar}>
+        <div style={{fontWeight: 'bold'}}>🤖 AI MODEL: v{stats.version}</div>
+        <div style={{flex: 1, margin: '0 30px'}}>
+           LEARNING PROGRESS: 
+           <div style={styles.progressBg}>
+              <div style={{...styles.progressFill, width: `${stats.maturity}%`}} />
+           </div>
+        </div>
+        <div style={{color: '#ff4d4d', fontWeight: 'bold'}}>🎯 THREATS CAUGHT: {stats.threats_caught}</div>
+      </div>
+
+      <h1 style={{color: '#00ff88'}}>🛡️ WATCHDOG: LIVE MLOPS TERMINAL</h1>
+      <button onClick={triggerAttack} style={styles.btn}>🚨 SIMULATE NEW ATTACK</button>
 
       <div style={{marginTop: '20px'}}>
         {logs.map((log, i) => (
-          <div key={i} style={{
-            ...styles.card,
-            borderLeftColor: log.status === 'FRAUD' ? '#ff4d4d' : log.status === 'REQUIRES_HUMAN_REVIEW' ? '#ffcc00' : '#00ff88'
-          }}>
+          <div key={i} style={{...styles.card, borderLeftColor: log.status === 'FRAUD' ? '#ff4d4d' : log.status === 'REQUIRES_HUMAN_REVIEW' ? '#ffcc00' : '#00ff88'}}>
             <p><strong>{log.status}</strong> | {log.id} | Amount: ${log.amount}</p>
             <p>AI Confidence: {log.probability}</p>
             {log.status === 'REQUIRES_HUMAN_REVIEW' && (
               <button onClick={handleMLOps} disabled={isSyncing} style={styles.adaptBtn}>
-                {isSyncing ? "SYNCING TO GITHUB..." : "✅ APPROVE & TRIGGER ADAPTATION"}
+                {isSyncing ? "SYNCING TO CLOUD..." : "✅ APPROVE & TRIGGER ADAPTATION"}
               </button>
             )}
           </div>
@@ -68,9 +76,12 @@ const App = () => {
 
 const styles = {
   body: { padding: '50px', background: '#050505', color: '#fff', minHeight: '100vh', fontFamily: 'monospace' },
+  statsBar: { display: 'flex', background: '#111', padding: '20px', borderRadius: '8px', marginBottom: '30px', border: '1px solid #00ff88', alignItems: 'center' },
+  progressBg: { background: '#333', height: '12px', borderRadius: '6px', marginTop: '8px', overflow: 'hidden' },
+  progressFill: { background: '#00ff88', height: '100%', transition: '0.8s ease-in-out' },
   btn: { padding: '15px 30px', background: '#ff4d4d', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 'bold' },
   card: { background: '#111', padding: '15px', margin: '10px 0', borderLeft: '8px solid', borderRadius: '4px' },
-  adaptBtn: { marginTop: '10px', padding: '8px', background: '#ffcc00', border: 'none', cursor: 'pointer', fontWeight: 'bold' }
+  adaptBtn: { marginTop: '10px', padding: '8px', background: '#ffcc00', border: 'none', cursor: 'pointer', fontWeight: 'bold', color: '#000' }
 };
 
 export default App;
